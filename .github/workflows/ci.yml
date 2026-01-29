@@ -2,7 +2,7 @@ name: Load Test & Verification
 
 on:
   push:
-    branches: [main, graphcng]
+    branches: ['*']
   pull_request:
     branches: [main]
   workflow_dispatch:
