@@ -3,19 +3,17 @@ FROM oven/bun:latest
 WORKDIR /app
 
 COPY package.json ./
-COPY bun.lock ./
-
-COPY package.json ./
-
-COPY package.json bun.lock* ./
 
 RUN bun install
 
-# COPY prisma ./prisma
-# RUN bunx prisma generate
+COPY prisma ./prisma
+RUN bunx prisma generate
 
-COPY src ./src
 COPY tsconfig.json ./
+COPY src ./src
 
-EXPOSE 3000
-CMD ["bun", "run", "src/app.ts"]
+RUN bun run build
+
+EXPOSE 3001
+
+CMD ["bun", "dist/index.js"]

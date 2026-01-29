@@ -1,37 +1,98 @@
+version: '3.8'
+
 services:
-    api-gateway:
-        build: ./services/api-gateway
-        ports:
-            - "8080:3000"
-        env_file:
-            - ./services/api-gateway/.env
-        depends_on:
-            - network-service
-            - product-service
-            - demand-service
-            - validation-service
-        restart: unless-stopped
+  api-gateway:
+    build: ./services/api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ORDER_SERVICE_URL=http://order-service:3001
+      - INVENTORY_SERVICE_URL=http://inventory-service:3002
+    depends_on:
+      - order-service
+      - inventory-service
+    restart: always
 
-    network-service:
-        build: ./services/network-service
-        env_file:
-            - ./services/network-service/.env
-        restart: unless-stopped
+  order-service:
+    build: ./services/order-service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgresql://user:password@order-db:5432/orderdb
+      - INVENTORY_SERVICE_URL=http://inventory-service:3002
+    depends_on:
+      - order-db
+    command: sh -c "bunx prisma db push && bun dist/index.js"
+    restart: always
 
-    product-service:
-        build: ./services/product-service
-        env_file:
-            - ./services/product-service/.env
-        restart: unless-stopped
+  inventory-service:
+    build: ./services/inventory-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - DATABASE_URL=postgresql://user:password@inventory-db:5432/inventorydb
+    depends_on:
+      - inventory-db
+    command: sh -c "bunx prisma db push && bun dist/index.js"
+    restart: always
 
-    demand-service:
-        build: ./services/demand-service
-        env_file:
-            - ./services/demand-service/.env
-        restart: unless-stopped
+  frontend:
+    build: ./services/frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_ORDER_SERVICE_URL=http://localhost:3001
+      - VITE_INVENTORY_SERVICE_URL=http://localhost:3002
+    depends_on:
+      - order-service
+      - inventory-service
 
-    validation-service:
-        build: ./services/validation-service
-        env_file:
-            - ./services/validation-service/.env
-        restart: unless-stopped
+  order-db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=orderdb
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+
+  inventory-db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=inventorydb
+    volumes:
+      - inventory-db-data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3003:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/my_dashboards
+
+volumes:
+  order-db-data:
+  inventory-db-data:
+  grafana-storage:
