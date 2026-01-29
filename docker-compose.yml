@@ -1,96 +1,98 @@
 version: '3.8'
 
 services:
-  # Databases
-  order-db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: order_db
+  api-gateway:
+    build: ./services/api-gateway
     ports:
-      - "5432:5432"
-    networks:
-      - valerix-net
-
-  inventory-db:
-    image: postgres:15-alpine
+      - "8080:8080"
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: inventory_db
-    ports:
-      - "5433:5432"
-    networks:
-      - valerix-net
-
-  # Services
-  order-service:
-    build: ./order-service
-    environment:
-      DATABASE_URL: postgresql://user:password@order-db:5432/order_db
-      INVENTORY_SERVICE_URL: http://inventory-service:3001
-      PORT: 3002
-    ports:
-      - "3002:3002"
+      - PORT=8080
+      - ORDER_SERVICE_URL=http://order-service:3001
+      - INVENTORY_SERVICE_URL=http://inventory-service:3002
     depends_on:
-      - order-db
+      - order-service
       - inventory-service
-    networks:
-      - valerix-net
+    restart: always
 
-  inventory-service:
-    build: ./inventory-service
-    environment:
-      DATABASE_URL: postgresql://user:password@inventory-db:5432/inventory_db
-      PORT: 3001
+  order-service:
+    build: ./services/order-service
     ports:
       - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgresql://user:password@order-db:5432/orderdb
+      - INVENTORY_SERVICE_URL=http://inventory-service:3002
+    depends_on:
+      - order-db
+    command: sh -c "bunx prisma db push && bun dist/index.js"
+    restart: always
+
+  inventory-service:
+    build: ./services/inventory-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - DATABASE_URL=postgresql://user:password@inventory-db:5432/inventorydb
     depends_on:
       - inventory-db
-    networks:
-      - valerix-net
+    command: sh -c "bunx prisma db push && bun dist/index.js"
+    restart: always
 
-#   # Monitoring
-#   prometheus:
-#     image: prom/prometheus:latest
-#     volumes:
-#       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-#     ports:
-#       - "9090:9090"
-#     networks:
-#       - valerix-net
+  frontend:
+    build: ./services/frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_ORDER_SERVICE_URL=http://localhost:3001
+      - VITE_INVENTORY_SERVICE_URL=http://localhost:3002
+    depends_on:
+      - order-service
+      - inventory-service
 
-#   grafana:
-#     image: grafana/grafana:latest
-#     ports:
-#       - "3000:3000"
-#     environment:
-#       - GF_SECURITY_ADMIN_PASSWORD=admin
-#     volumes:
-#       - ./grafana/provisioning:/etc/grafana/provisioning
-#     networks:
-#       - valerix-net
+  order-db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=orderdb
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
 
-#   # Frontend (Vite Dev Server)
-#   # Keeping it simple for dev: bind mount source and run dev
-#   # Note: Requires 'frontend' folder to exist and have package.json
-#   # We will generate frontend next.
-#   frontend:
-#     image: node:18-alpine
-#     working_dir: /app
-#     volumes:
-#       - ./frontend:/app
-#       - /app/node_modules
-#     command: sh -c "npm install && npm run dev -- --host"
-#     ports:
-#       - "5173:5173"
-#     environment:
-#       - VITE_ORDER_API=http://localhost:3002
-#       - VITE_INVENTORY_API=http://localhost:3001
-#     networks:
-#       - valerix-net
+  inventory-db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=inventorydb
+    volumes:
+      - inventory-db-data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
 
-networks:
-  valerix-net:
-    driver: bridge
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3003:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/my_dashboards
+
+volumes:
+  order-db-data:
+  inventory-db-data:
+  grafana-storage:

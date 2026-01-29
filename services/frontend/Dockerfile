@@ -8,8 +8,6 @@ RUN bun install
 
 COPY . .
 
-RUN bun run build
+EXPOSE 5173
 
-EXPOSE 8080
-
-CMD ["bun", "dist/index.js"]
+CMD ["bun", "run", "dev"]

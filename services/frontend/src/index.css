@@ -1,0 +1,94 @@
+:root {
+  --bg-color: #0d1117;
+  --text-color: #e6edf3;
+  --card-bg: #161b22;
+  --primary: #238636;
+  --danger: #da3633;
+  --warning: #d29922;
+  --success: #238636;
+  --border: #30363d;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+  width: 100%;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  background: linear-gradient(90deg, #58a6ff, #a371f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background-color: var(--card-bg);
+  padding: 2em;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-top: 2rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--primary);
+  color: white;
+  cursor: pointer;
+  transition: border-color 0.25s;
+  margin: 0.5rem;
+}
+
+button:hover {
+  filter: brightness(1.1);
+}
+
+button.danger {
+  background-color: var(--danger);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.2em 0.8em;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.8em;
+  text-transform: uppercase;
+}
+
+.PENDING { background-color: var(--warning); color: black; }
+.CONFIRMED { background-color: var(--success); color: white; }
+.FAILED { background-color: var(--danger); color: white; }
+
+.log-container {
+    text-align: left;
+    max-height: 300px;
+    overflow-y: auto;
+    background: #000;
+    padding: 1rem;
+    border-radius: 8px;
+    font-family: monospace;
+    margin-top: 2rem;
+}
